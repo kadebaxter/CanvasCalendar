@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage x:Class="CanvasCalendar.Pages.AssignmentListPage"
+             xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:CanvasCalendar.Models"
+             xmlns:vm="clr-namespace:CanvasCalendar.PageModels"
+             x:DataType="vm:AssignmentListPageModel"
+             Title="Assignments">
+
+    <Grid>
+        <!-- Main Content -->
+        <RefreshView Command="{Binding RefreshCommand}" 
+                     IsRefreshing="{Binding IsRefreshing}">
+            <ScrollView>
+                <StackLayout Padding="16" Spacing="16">
+                    
+                    <!-- Header Section -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        
+                        <Label Grid.Column="0" 
+                               Text="Upcoming Assignments" 
+                               FontSize="24" 
+                               FontAttributes="Bold" />
+                        
+                        <Button Grid.Column="1"
+                                Text="Settings"
+                                Command="{Binding NavigateToSettingsCommand}"
+                                IsVisible="{Binding HasCredentials, Converter={StaticResource InvertedBoolConverter}}"
+                                BackgroundColor="Orange"
+                                TextColor="White" />
+                    </Grid>
+
+                    <!-- No Credentials Warning -->
+                    <Frame IsVisible="{Binding HasCredentials, Converter={StaticResource InvertedBoolConverter}}"
+                           BackgroundColor="LightYellow"
+                           BorderColor="Orange"
+                           Padding="16"
+                           Margin="0,8">
+                        <StackLayout>
+                            <Label Text="⚠️ Canvas not configured"
+                                   FontAttributes="Bold"
+                                   TextColor="DarkOrange" />
+                            <Label Text="Please configure your Canvas URL and API token in Settings to sync assignments."
+                                   TextColor="DarkOrange" />
+                        </StackLayout>
+                    </Frame>
+
+                    <!-- Sync Button -->
+                    <Button Text="Sync with Canvas"
+                            Command="{Binding SyncWithCanvasCommand}"
+                            IsEnabled="{Binding IsBusy, Converter={StaticResource InvertedBoolConverter}}"
+                            BackgroundColor="DodgerBlue"
+                            TextColor="White"
+                            Margin="0,8" />
+
+                    <!-- Assignments List -->
+                    <CollectionView ItemsSource="{Binding Assignments}"
+                                    IsVisible="{Binding Assignments.Count, Converter={StaticResource CountToBoolConverter}}"
+                                    SelectionMode="None">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:Assignment">
+                                <Grid Padding="0,4">
+                                    <Frame BackgroundColor="White"
+                                           BorderColor="LightGray"
+                                           CornerRadius="8"
+                                           Padding="16"
+                                           HasShadow="True">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+
+                                            <!-- Assignment Title -->
+                                            <Label Grid.Row="0"
+                                                   Text="{Binding Title}"
+                                                   FontSize="18"
+                                                   FontAttributes="Bold"
+                                                   TextColor="Black" />
+
+                                            <!-- Course Info -->
+                                            <Label Grid.Row="1"
+                                                   Text="{Binding Course.Code}"
+                                                   FontSize="14"
+                                                   TextColor="DodgerBlue"
+                                                   Margin="0,4,0,0" />
+
+                                            <!-- Due Date -->
+                                            <StackLayout Grid.Row="2" 
+                                                         Orientation="Horizontal"
+                                                         Margin="0,8,0,0">
+                                                <Label Text="Due:"
+                                                       FontAttributes="Bold"
+                                                       FontSize="14" />
+                                                <Label Text="{Binding DueDate, StringFormat='{0:MMM dd, yyyy h:mm tt}'}"
+                                                       FontSize="14"
+                                                       TextColor="DarkRed" />
+                                            </StackLayout>
+
+                                            <!-- Points -->
+                                            <StackLayout Grid.Row="3" 
+                                                         Orientation="Horizontal"
+                                                         Margin="0,4,0,0">
+                                                <Label Text="Points:"
+                                                       FontAttributes="Bold"
+                                                       FontSize="12" />
+                                                <Label Text="{Binding PointsPossible}"
+                                                       FontSize="12"
+                                                       TextColor="Gray" />
+                                            </StackLayout>
+                                        </Grid>
+
+                                        <Frame.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AssignmentListPageModel}}, Path=NavigateToAssignmentCommand}"
+                                                                  CommandParameter="{Binding .}" />
+                                        </Frame.GestureRecognizers>
+                                    </Frame>
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                    <!-- Empty State -->
+                    <StackLayout IsVisible="{Binding Assignments.Count, Converter={StaticResource InvertedCountToBoolConverter}}"
+                                 VerticalOptions="CenterAndExpand"
+                                 HorizontalOptions="Center"
+                                 Margin="0,40">
+                        <Label Text="📚"
+                               FontSize="48"
+                               HorizontalOptions="Center" />
+                        <Label Text="No upcoming assignments"
+                               FontSize="18"
+                               FontAttributes="Bold"
+                               HorizontalOptions="Center"
+                               Margin="0,8" />
+                        <Label Text="Sync with Canvas to see your assignments"
+                               FontSize="14"
+                               TextColor="Gray"
+                               HorizontalOptions="Center" />
+                    </StackLayout>
+
+                </StackLayout>
+            </ScrollView>
+        </RefreshView>
+
+        <!-- Loading Indicator -->
+        <ActivityIndicator IsVisible="{Binding IsBusy}"
+                           IsRunning="{Binding IsBusy}"
+                           Color="DodgerBlue"
+                           VerticalOptions="Center"
+                           HorizontalOptions="Center" />
+    </Grid>
+
+</ContentPage>

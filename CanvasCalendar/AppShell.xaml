@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="CanvasCalendar.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:pages="clr-namespace:CanvasCalendar.Pages"
+    Shell.FlyoutBehavior="Flyout"
+    Title="Canvas Calendar">
+
+    <ShellContent
+        Title="Assignments"
+        Icon="assignment"
+        ContentTemplate="{DataTemplate pages:AssignmentListPage}"
+        Route="assignments" />
+
+    <ShellContent
+        Title="Settings"
+        Icon="settings"
+        ContentTemplate="{DataTemplate pages:SettingsPage}"
+        Route="settings" />
+
+</Shell>

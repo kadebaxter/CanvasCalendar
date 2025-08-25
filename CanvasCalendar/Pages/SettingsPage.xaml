@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage x:Class="CanvasCalendar.Pages.SettingsPage"
+             xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:CanvasCalendar.PageModels"
+             x:DataType="vm:SettingsPageModel"
+             Title="Settings">
+
+    <ScrollView Padding="16">
+        <StackLayout Spacing="16">
+            
+            <Label Text="Canvas Configuration" 
+                   FontSize="24" 
+                   FontAttributes="Bold" 
+                   Margin="0,0,0,16" />
+
+            <!-- Canvas URL -->
+            <StackLayout Spacing="8">
+                <Label Text="Canvas URL" 
+                       FontAttributes="Bold" />
+                <Entry Text="{Binding CanvasUrl}"
+                       Placeholder="https://yourschool.instructure.com"
+                       Keyboard="Url"
+                       IsEnabled="{Binding IsBusy, Converter={StaticResource InvertedBoolConverter}}" />
+                <Label Text="Enter your school's Canvas URL (e.g., https://yourschool.instructure.com)"
+                       FontSize="12"
+                       TextColor="Gray" />
+            </StackLayout>
+
+            <!-- API Token -->
+            <StackLayout Spacing="8">
+                <Label Text="Canvas API Token" 
+                       FontAttributes="Bold" />
+                <Entry Text="{Binding CanvasApiToken}"
+                       Placeholder="Your Canvas API Token"
+                       IsPassword="True"
+                       IsEnabled="{Binding IsBusy, Converter={StaticResource InvertedBoolConverter}}" />
+                <Label FontSize="12" TextColor="Gray">
+                    <Label.FormattedText>
+                        <FormattedString>
+                            <Span Text="Get your API token from Canvas: Account → Settings → " />
+                            <Span Text="+ New Access Token" FontAttributes="Bold" />
+                        </FormattedString>
+                    </Label.FormattedText>
+                </Label>
+            </StackLayout>
+
+            <!-- Validation Status -->
+            <Frame IsVisible="{Binding ValidationMessage, Converter={StaticResource StringToBoolConverter}}"
+                   BackgroundColor="LightBlue"
+                   BorderColor="DodgerBlue"
+                   Padding="12"
+                   Margin="0,8">
+                <Label Text="{Binding ValidationMessage}"
+                       TextColor="DarkBlue"
+                       FontSize="14" />
+            </Frame>
+
+            <!-- Action Buttons -->
+            <StackLayout Spacing="12" Margin="0,16">
+                <Button Text="Validate Credentials"
+                        Command="{Binding ValidateCredentialsCommand}"
+                        IsEnabled="{Binding IsBusy, Converter={StaticResource InvertedBoolConverter}}"
+                        BackgroundColor="DodgerBlue"
+                        TextColor="White" />
+
+                <Button Text="Save Settings"
+                        Command="{Binding SaveSettingsCommand}"
+                        IsEnabled="{Binding CredentialsValid}"
+                        BackgroundColor="Green"
+                        TextColor="White" />
+
+                <Button Text="Clear Settings"
+                        Command="{Binding ClearSettingsCommand}"
+                        IsEnabled="{Binding IsBusy, Converter={StaticResource InvertedBoolConverter}}"
+                        BackgroundColor="Orange"
+                        TextColor="White" />
+            </StackLayout>
+
+            <!-- Help Section -->
+            <Frame BackgroundColor="LightYellow"
+                   BorderColor="Orange"
+                   Padding="16"
+                   Margin="0,24,0,0">
+                <StackLayout Spacing="8">
+                    <Label Text="📝 How to get your Canvas API Token:"
+                           FontAttributes="Bold"
+                           FontSize="16" />
+                    <Label FontSize="14">
+                        <Label.FormattedText>
+                            <FormattedString>
+                                <Span Text="1. Log into Canvas" />
+                                <Span Text="&#x0a;2. Go to Account → Settings" />
+                                <Span Text="&#x0a;3. Scroll to 'Approved Integrations'" />
+                                <Span Text="&#x0a;4. Click '+ New Access Token'" />
+                                <Span Text="&#x0a;5. Enter a purpose (e.g., 'Canvas Calendar')" />
+                                <Span Text="&#x0a;6. Copy the generated token" />
+                            </FormattedString>
+                        </Label.FormattedText>
+                    </Label>
+                </StackLayout>
+            </Frame>
+
+        </StackLayout>
+    </ScrollView>
+
+    <!-- Loading Overlay -->
+    <Grid IsVisible="{Binding IsBusy}"
+          BackgroundColor="Black"
+          Opacity="0.5">
+        <ActivityIndicator IsRunning="{Binding IsBusy}"
+                           Color="White"
+                           VerticalOptions="Center"
+                           HorizontalOptions="Center" />
+    </Grid>
+
+</ContentPage>
