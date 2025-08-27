@@ -9,8 +9,9 @@ namespace CanvasCalendar.PageModels;
 public partial class AssignmentListPageModel : ObservableObject
 {
     private readonly AssignmentRepository _assignmentRepository;
-    private readonly CourseRepository _courseRepository;
-    private readonly ICanvasService _canvasService;
+    private readonly IAssignmentSyncService _assignmentSyncService;
+    private readonly IDialogService _dialogService;
+    private readonly INavigationService _navigationService;
     private readonly IErrorHandler _errorHandler;
     private readonly IConfigurationService _configurationService;
 
@@ -31,14 +32,16 @@ public partial class AssignmentListPageModel : ObservableObject
 
     public AssignmentListPageModel(
         AssignmentRepository assignmentRepository,
-        CourseRepository courseRepository,
-        ICanvasService canvasService,
+        IAssignmentSyncService assignmentSyncService,
+        IDialogService dialogService,
+        INavigationService navigationService,
         IErrorHandler errorHandler,
         IConfigurationService configurationService)
     {
         _assignmentRepository = assignmentRepository;
-        _courseRepository = courseRepository;
-        _canvasService = canvasService;
+        _assignmentSyncService = assignmentSyncService;
+        _dialogService = dialogService;
+        _navigationService = navigationService;
         _errorHandler = errorHandler;
         _configurationService = configurationService;
         
@@ -68,9 +71,9 @@ public partial class AssignmentListPageModel : ObservableObject
     {
         if (!HasCredentials)
         {
-            await Shell.Current.DisplayAlert("Configuration Required", 
-                "Please configure your Canvas settings first.", "OK");
-            await Shell.Current.GoToAsync("settings");
+            await _dialogService.ShowAlertAsync("Configuration Required", 
+                "Please configure your Canvas settings first.");
+            await _navigationService.NavigateToSettingsAsync();
             return;
         }
 
@@ -78,79 +81,24 @@ public partial class AssignmentListPageModel : ObservableObject
         {
             IsBusy = true;
             
-            var apiToken = _configurationService.GetCanvasApiToken();
-            if (string.IsNullOrEmpty(apiToken))
-            {
-                _errorHandler.HandleError(new InvalidOperationException("Canvas API token not configured"),
-                    "Canvas API token not found. Please configure it in Settings.");
-                return;
-            }
-
-            // Fetch upcoming assignments from Canvas
-            var canvasAssignments = await _canvasService.GetUpcomingAssignmentsAsync(CanvasUrl, apiToken);
+            var result = await _assignmentSyncService.SyncWithCanvasAsync();
             
-            if (!canvasAssignments.Any())
+            if (result.Success)
             {
-                await Shell.Current.DisplayAlert("No Assignments", 
-                    "No upcoming assignments found for the next 7 days.", "OK");
-                return;
+                await _dialogService.ShowAlertAsync("Sync Complete", result.Message);
+                await LoadAssignments();
             }
-
-            // Sync courses first
-            var uniqueCourses = canvasAssignments
-                .Where(a => a.Course != null)
-                .Select(a => a.Course!)
-                .GroupBy(c => c.CanvasId)
-                .Select(g => g.First())
-                .ToList();
-
-            foreach (var course in uniqueCourses)
+            else
             {
-                var existingCourse = await _courseRepository.GetByCanvasIdAsync(course.CanvasId);
-                if (existingCourse == null)
+                if (result.Error != null)
                 {
-                    await _courseRepository.SaveItemAsync(course);
-                }
-            }
-
-            // Sync assignments
-            var syncedCount = 0;
-            foreach (var assignment in canvasAssignments)
-            {
-                var existingAssignment = await _assignmentRepository.GetByCanvasIdAsync(assignment.CanvasId);
-                
-                if (assignment.Course != null)
-                {
-                    var course = await _courseRepository.GetByCanvasIdAsync(assignment.Course.CanvasId);
-                    if (course != null)
-                    {
-                        assignment.CourseID = course.ID;
-                        assignment.Course = course;
-                    }
-                }
-
-                if (existingAssignment == null)
-                {
-                    await _assignmentRepository.SaveItemAsync(assignment);
-                    syncedCount++;
+                    _errorHandler.HandleError(result.Error, result.Message);
                 }
                 else
                 {
-                    // Update existing assignment
-                    existingAssignment.Title = assignment.Title;
-                    existingAssignment.Description = assignment.Description;
-                    existingAssignment.DueDate = assignment.DueDate;
-                    existingAssignment.PointsPossible = assignment.PointsPossible;
-                    existingAssignment.UpdatedAt = DateTime.Now;
-                    
-                    await _assignmentRepository.SaveItemAsync(existingAssignment);
+                    await _dialogService.ShowAlertAsync("Sync Failed", result.Message);
                 }
             }
-
-            await Shell.Current.DisplayAlert("Sync Complete", 
-                $"Synchronized {syncedCount} new assignments from Canvas.", "OK");
-            
-            await LoadAssignments();
         }
         catch (Exception e)
         {
@@ -164,11 +112,11 @@ public partial class AssignmentListPageModel : ObservableObject
 
     [RelayCommand]
     private Task NavigateToAssignment(Assignment assignment)
-        => Shell.Current.GoToAsync($"assignment?id={assignment.ID}");
+        => _navigationService.NavigateToAssignmentAsync(assignment.ID);
 
     [RelayCommand]
     private Task NavigateToSettings()
-        => Shell.Current.GoToAsync("settings");
+        => _navigationService.NavigateToSettingsAsync();
 
     private async Task LoadAssignments()
     {

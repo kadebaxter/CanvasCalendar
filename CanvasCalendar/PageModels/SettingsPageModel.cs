@@ -7,10 +7,9 @@ namespace CanvasCalendar.PageModels;
 
 public partial class SettingsPageModel : ObservableObject
 {
-    private readonly ICanvasService _canvasService;
+    private readonly ISettingsService _settingsService;
+    private readonly IDialogService _dialogService;
     private readonly IErrorHandler _errorHandler;
-    private readonly ILogger<SettingsPageModel> _logger;
-    private readonly IConfigurationService _configurationService;
 
     [ObservableProperty]
     private string _canvasUrl = string.Empty;
@@ -28,15 +27,13 @@ public partial class SettingsPageModel : ObservableObject
     private string _validationMessage = string.Empty;
 
     public SettingsPageModel(
-        ICanvasService canvasService,
-        IErrorHandler errorHandler,
-        ILogger<SettingsPageModel> logger,
-        IConfigurationService configurationService)
+        ISettingsService settingsService,
+        IDialogService dialogService,
+        IErrorHandler errorHandler)
     {
-        _canvasService = canvasService;
+        _settingsService = settingsService;
+        _dialogService = dialogService;
         _errorHandler = errorHandler;
-        _logger = logger;
-        _configurationService = configurationService;
         
         LoadSettings();
     }
@@ -44,41 +41,30 @@ public partial class SettingsPageModel : ObservableObject
     [RelayCommand]
     private async Task ValidateCredentials()
     {
-        if (string.IsNullOrWhiteSpace(CanvasUrl) || string.IsNullOrWhiteSpace(CanvasApiToken))
-        {
-            ValidationMessage = "Please enter both Canvas URL and API Token";
-            CredentialsValid = false;
-            _logger.LogWarning("Validation attempted with missing credentials. URL: {HasUrl}, Token: {HasToken}", 
-                !string.IsNullOrWhiteSpace(CanvasUrl), !string.IsNullOrWhiteSpace(CanvasApiToken));
-            return;
-        }
-
         try
         {
             IsBusy = true;
             ValidationMessage = "Validating credentials...";
             
-            _logger.LogInformation("Starting Canvas credential validation for URL: {CanvasUrl}", CanvasUrl);
+            var result = await _settingsService.ValidateCredentialsAsync(CanvasUrl, CanvasApiToken);
             
-            var isValid = await _canvasService.ValidateCredentialsAsync(CanvasUrl, CanvasApiToken);
-            
-            CredentialsValid = isValid;
-            ValidationMessage = isValid 
-                ? "✅ Credentials are valid!" 
-                : "❌ Invalid credentials. Please check your Canvas URL and API token.";
+            CredentialsValid = result.IsValid;
+            ValidationMessage = result.Message;
                 
-            _logger.LogInformation("Canvas credential validation result: {IsValid}", isValid);
-                
-            if (isValid)
+            if (result.IsValid)
             {
                 await SaveSettings();
+            }
+            else if (result.Error != null)
+            {
+                Console.WriteLine($"Error during Canvas credential validation: {result.Error.Message}");
+                _errorHandler.HandleError(result.Error);
             }
         }
         catch (Exception e)
         {
             CredentialsValid = false;
-            ValidationMessage = "❌ Error validating credentials. Please check your network connection.";
-            _logger.LogError(e, "Error during Canvas credential validation");
+            ValidationMessage = "❌ Unexpected error during validation.";
             _errorHandler.HandleError(e);
         }
         finally
@@ -92,12 +78,18 @@ public partial class SettingsPageModel : ObservableObject
     {
         try
         {
-            // For now, we'll save to preferences. In a real app, you'd want secure storage.
-            Preferences.Default.Set("Canvas_Url", CanvasUrl);
-            Preferences.Default.Set("Canvas_ApiToken", CanvasApiToken);
+            var success = await _settingsService.SaveSettingsAsync(CanvasUrl, CanvasApiToken);
             
-            await Shell.Current.DisplayAlert("Settings Saved", 
-                "Canvas settings have been saved successfully.", "OK");
+            if (success)
+            {
+                await _dialogService.ShowAlertAsync("Settings Saved", 
+                    "Canvas settings have been saved successfully.");
+            }
+            else
+            {
+                await _dialogService.ShowAlertAsync("Save Failed", 
+                    "Failed to save settings. Please try again.");
+            }
         }
         catch (Exception e)
         {
@@ -113,33 +105,16 @@ public partial class SettingsPageModel : ObservableObject
         CredentialsValid = false;
         ValidationMessage = string.Empty;
         
-        Preferences.Default.Remove("Canvas_Url");
-        Preferences.Default.Remove("Canvas_ApiToken");
+        _settingsService.ClearSettings();
     }
 
     private void LoadSettings()
     {
-        // Load from configuration service (User Secrets first, then preferences)
-        var configUrl = _configurationService.GetCanvasUrl();
-        var configToken = _configurationService.GetCanvasApiToken();
+        var settingsData = _settingsService.LoadSettings();
         
-        if (!string.IsNullOrEmpty(configUrl) && !string.IsNullOrEmpty(configToken))
-        {
-            CanvasUrl = configUrl;
-            CanvasApiToken = configToken;
-            ValidationMessage = "Credentials loaded from User Secrets";
-        }
-        else
-        {
-            // Load from preferences as fallback
-            CanvasUrl = Preferences.Default.Get("Canvas_Url", string.Empty);
-            CanvasApiToken = Preferences.Default.Get("Canvas_ApiToken", string.Empty);
-            
-            if (!string.IsNullOrWhiteSpace(CanvasUrl) && !string.IsNullOrWhiteSpace(CanvasApiToken))
-            {
-                ValidationMessage = "Credentials loaded from Preferences";
-            }
-        }
+        CanvasUrl = settingsData.CanvasUrl;
+        CanvasApiToken = settingsData.CanvasApiToken;
+        ValidationMessage = settingsData.LoadMessage;
     }
 
     partial void OnCanvasUrlChanged(string value)

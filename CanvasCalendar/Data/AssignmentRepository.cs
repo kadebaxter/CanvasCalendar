@@ -1,6 +1,5 @@
 using CanvasCalendar.Models;
 using Microsoft.Data.Sqlite;
-using Microsoft.Extensions.Logging;
 
 namespace CanvasCalendar.Data;
 
@@ -10,13 +9,11 @@ namespace CanvasCalendar.Data;
 public class AssignmentRepository
 {
     private bool _hasBeenInitialized = false;
-    private readonly ILogger<AssignmentRepository> _logger;
     private readonly CourseRepository _courseRepository;
 
-    public AssignmentRepository(CourseRepository courseRepository, ILogger<AssignmentRepository> logger)
+    public AssignmentRepository(CourseRepository courseRepository)
     {
         _courseRepository = courseRepository;
-        _logger = logger;
     }
 
     /// <summary>
@@ -54,7 +51,7 @@ public class AssignmentRepository
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Error creating Assignment table");
+            Console.WriteLine($"Error creating Assignment table: {e.Message}");
             throw;
         }
 

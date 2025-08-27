@@ -5,6 +5,7 @@
              xmlns:models="clr-namespace:CanvasCalendar.Models"
              xmlns:vm="clr-namespace:CanvasCalendar.PageModels"
              x:DataType="vm:AssignmentListPageModel"
+             x:Name="PageRoot"
              Title="Assignments">
 
     <Grid>
@@ -117,7 +118,7 @@
                                         </Grid>
 
                                         <Frame.GestureRecognizers>
-                                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AssignmentListPageModel}}, Path=NavigateToAssignmentCommand}"
+                                            <TapGestureRecognizer Command="{Binding Source={x:Reference Name=PageRoot}, Path=BindingContext.NavigateToAssignmentCommand}"
                                                                   CommandParameter="{Binding .}" />
                                         </Frame.GestureRecognizers>
                                     </Frame>

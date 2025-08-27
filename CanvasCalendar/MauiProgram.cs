@@ -1,5 +1,4 @@
 ﻿using CommunityToolkit.Maui;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using CanvasCalendar.Data;
 using CanvasCalendar.Services;
@@ -25,7 +24,6 @@ public static class MauiProgram
         // Add User Secrets for Canvas configuration
 #if DEBUG
         builder.Configuration.AddUserSecrets<App>();
-        builder.Logging.AddDebug();
 #endif
 
         // Add HTTP client
@@ -41,6 +39,10 @@ public static class MauiProgram
         // Business Services
         builder.Services.AddSingleton<ICanvasService, CanvasService>();
         builder.Services.AddSingleton<IErrorHandler, ModalErrorHandler>();
+        builder.Services.AddSingleton<IAssignmentSyncService, AssignmentSyncService>();
+        builder.Services.AddSingleton<IDialogService, DialogService>();
+        builder.Services.AddSingleton<INavigationService, NavigationService>();
+        builder.Services.AddSingleton<ISettingsService, SettingsService>();
 
         // Page Models
         builder.Services.AddSingleton<AssignmentListPageModel>();

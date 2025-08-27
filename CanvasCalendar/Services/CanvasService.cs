@@ -1,6 +1,5 @@
 using CanvasCalendar.Data;
 using CanvasCalendar.Models;
-using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -12,13 +11,11 @@ namespace CanvasCalendar.Services;
 public class CanvasService : ICanvasService
 {
     private readonly HttpClient _httpClient;
-    private readonly ILogger<CanvasService> _logger;
     private readonly JsonSerializerOptions _jsonOptions;
 
-    public CanvasService(HttpClient httpClient, ILogger<CanvasService> logger)
+    public CanvasService(HttpClient httpClient)
     {
         _httpClient = httpClient;
-        _logger = logger;
         
         _jsonOptions = new JsonSerializerOptions
         {
@@ -32,35 +29,88 @@ public class CanvasService : ICanvasService
     {
         try
         {
-            _logger.LogInformation("Validating Canvas credentials for URL: {CanvasUrl}", canvasUrl);
+            Console.WriteLine($"Validating Canvas credentials for URL: {canvasUrl}");
             
             var normalizedUrl = NormalizeCanvasUrl(canvasUrl);
             var request = new HttpRequestMessage(HttpMethod.Get, $"{normalizedUrl}/api/v1/users/self");
             request.Headers.Add("Authorization", $"Bearer {apiToken}");
 
-            _logger.LogDebug("Making request to: {RequestUrl}", request.RequestUri);
-            
             var response = await _httpClient.SendAsync(request);
-            
-            _logger.LogInformation("Canvas API response: {StatusCode}", response.StatusCode);
             
             if (!response.IsSuccessStatusCode)
             {
                 var content = await response.Content.ReadAsStringAsync();
-                _logger.LogWarning("Canvas API validation failed. Status: {StatusCode}, Content: {Content}", 
-                    response.StatusCode, content);
+                Console.WriteLine($"Canvas API validation failed. Status: {response.StatusCode}, Content: {content}");
             }
             
             return response.IsSuccessStatusCode;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error validating Canvas credentials for URL: {CanvasUrl}", canvasUrl);
+            Console.WriteLine($"Error validating Canvas credentials for URL: {canvasUrl}. Error: {ex.Message}");
             return false;
         }
     }
 
-    public async Task<List<Course>> GetCoursesAsync(string canvasUrl, string apiToken)
+    public async Task<List<Assignment>> GetUpcomingAssignmentsAsync(string canvasUrl, string apiToken, int days = 7)
+    {
+        try
+        {
+            var startDate = DateTime.Now.Date;
+            var endDate = startDate.AddDays(days);
+            
+            // First, get all active courses
+            var courses = await GetCoursesAsync(canvasUrl, apiToken);
+            
+            if (!courses.Any())
+            {
+                Console.WriteLine("No active courses found for assignment fetching");
+                return [];
+            }
+            
+            var allAssignments = new List<Assignment>();
+            
+            // Fetch assignments from each course
+            foreach (var course in courses)
+            {
+                try
+                {
+                    var courseAssignments = await GetAssignmentsByCourseAsync(course.CanvasId, canvasUrl, apiToken, startDate, endDate);
+                    
+                    // Ensure course relationship is set
+                    foreach (var assignment in courseAssignments)
+                    {
+                        if (assignment.Course == null)
+                        {
+                            assignment.Course = course;
+                        }
+                    }
+                    
+                    allAssignments.AddRange(courseAssignments);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to fetch assignments for course {course.CanvasId} ({course.Name}): {ex.Message}");
+                    // Continue with other courses even if one fails
+                }
+            }
+            
+            // Filter assignments to only include those due within the date range
+            var filteredAssignments = allAssignments
+                .Where(a => a.DueDate >= startDate && a.DueDate <= endDate)
+                .OrderBy(a => a.DueDate)
+                .ToList();
+            
+            return filteredAssignments;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching upcoming assignments: {ex.Message}");
+            return [];
+        }
+    }
+
+    private async Task<List<Course>> GetCoursesAsync(string canvasUrl, string apiToken)
     {
         try
         {
@@ -73,7 +123,7 @@ public class CanvasService : ICanvasService
             
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogError("Failed to fetch courses. Status: {StatusCode}", response.StatusCode);
+                Console.WriteLine($"Failed to fetch courses. Status: {response.StatusCode}");
                 return [];
             }
 
@@ -84,71 +134,45 @@ public class CanvasService : ICanvasService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching courses from Canvas");
+            Console.WriteLine($"Error fetching courses from Canvas: {ex.Message}");
             return [];
         }
     }
 
-    public async Task<List<Assignment>> GetAssignmentsAsync(string canvasUrl, string apiToken)
+    private async Task<List<Assignment>> GetAssignmentsByCourseAsync(string courseId, string canvasUrl, string apiToken, DateTime? startDate = null, DateTime? endDate = null)
     {
         try
         {
             var normalizedUrl = NormalizeCanvasUrl(canvasUrl);
-            var request = new HttpRequestMessage(HttpMethod.Get, 
-                $"{normalizedUrl}/api/v1/users/self/assignments?include[]=course");
+            var requestUrl = $"{normalizedUrl}/api/v1/courses/{courseId}/assignments?include[]=course";
+            
+            // Add date filtering if provided
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                requestUrl += $"&due_after={startDate.Value:yyyy-MM-dd}&due_before={endDate.Value:yyyy-MM-dd}";
+            }
+            
+            var request = new HttpRequestMessage(HttpMethod.Get, requestUrl);
             request.Headers.Add("Authorization", $"Bearer {apiToken}");
 
             var response = await _httpClient.SendAsync(request);
             
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogError("Failed to fetch assignments. Status: {StatusCode}", response.StatusCode);
+                Console.WriteLine($"Failed to fetch assignments for course {courseId}. Status: {response.StatusCode}");
                 return [];
             }
 
             var jsonContent = await response.Content.ReadAsStringAsync();
             var canvasAssignments = JsonSerializer.Deserialize<List<CanvasAssignmentDto>>(jsonContent, _jsonOptions);
 
-            return canvasAssignments?.Select(MapCanvasAssignmentToModel).ToList() ?? [];
+            var assignments = canvasAssignments?.Select(MapCanvasAssignmentToModel).ToList() ?? [];
+            
+            return assignments;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching assignments from Canvas");
-            return [];
-        }
-    }
-
-    public async Task<List<Assignment>> GetUpcomingAssignmentsAsync(string canvasUrl, string apiToken, int days = 7)
-    {
-        try
-        {
-            var startDate = DateTime.Now;
-            var endDate = startDate.AddDays(days);
-            
-            var normalizedUrl = NormalizeCanvasUrl(canvasUrl);
-            var request = new HttpRequestMessage(HttpMethod.Get, 
-                $"{normalizedUrl}/api/v1/users/self/assignments" +
-                $"?bucket=upcoming&include[]=course" +
-                $"&due_after={startDate:yyyy-MM-dd}" +
-                $"&due_before={endDate:yyyy-MM-dd}");
-            request.Headers.Add("Authorization", $"Bearer {apiToken}");
-
-            var response = await _httpClient.SendAsync(request);
-            
-            if (!response.IsSuccessStatusCode)
-            {
-                _logger.LogError("Failed to fetch upcoming assignments. Status: {StatusCode}", response.StatusCode);
-                return [];
-            }
-
-            var jsonContent = await response.Content.ReadAsStringAsync();
-            var canvasAssignments = JsonSerializer.Deserialize<List<CanvasAssignmentDto>>(jsonContent, _jsonOptions);
-
-            return canvasAssignments?.Select(MapCanvasAssignmentToModel).ToList() ?? [];
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error fetching upcoming assignments from Canvas");
+            Console.WriteLine($"Error fetching assignments for course {courseId}: {ex.Message}");
             return [];
         }
     }

@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Logging;
-
 namespace CanvasCalendar.Services;
 
 /// <summary>
@@ -7,16 +5,13 @@ namespace CanvasCalendar.Services;
 /// </summary>
 public class ModalErrorHandler : IErrorHandler
 {
-    private readonly ILogger<ModalErrorHandler> _logger;
-
-    public ModalErrorHandler(ILogger<ModalErrorHandler> logger)
+    public ModalErrorHandler()
     {
-        _logger = logger;
     }
 
     public void HandleError(Exception ex)
     {
-        _logger.LogError(ex, "An error occurred");
+        Console.WriteLine($"An error occurred: {ex.Message}");
         
         // Show user-friendly error message
         var userMessage = GetUserFriendlyMessage(ex);
@@ -25,7 +20,7 @@ public class ModalErrorHandler : IErrorHandler
 
     public void HandleError(Exception ex, string userMessage)
     {
-        _logger.LogError(ex, "An error occurred: {UserMessage}", userMessage);
+        Console.WriteLine($"An error occurred: {userMessage}. Details: {ex.Message}");
         ShowErrorToUser(userMessage);
     }
 
