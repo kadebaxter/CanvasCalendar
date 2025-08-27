@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:pagemodels="clr-namespace:CanvasCalendar.PageModels"
+             x:Class="CanvasCalendar.Pages.ChatPage"
+             x:DataType="pagemodels:ChatPageModel"
+             Title="AI Assistant">
+
+    <Grid RowDefinitions="*,Auto">
+        
+        <!-- Chat Messages -->
+        <CollectionView Grid.Row="0" 
+                        ItemsSource="{Binding Messages}"
+                        x:Name="MessagesCollectionView"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray900}}">
+            
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="pagemodels:ChatMessageDisplay">
+                    <Grid Margin="10,5" 
+                          ColumnDefinitions="*,*">
+                        
+                        <!-- User Message (Right side) -->
+                        <Border Grid.Column="1"
+                                IsVisible="{Binding IsFromUser}"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
+                                Stroke="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
+                                StrokeThickness="1"
+                                HorizontalOptions="End"
+                                MaximumWidthRequest="300"
+                                Margin="50,0,0,0">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="15,15,5,15" />
+                            </Border.StrokeShape>
+                            
+                            <StackLayout Padding="15,10">
+                                <Label Text="{Binding Message}" 
+                                       TextColor="White"
+                                       FontSize="14" />
+                                <Label Text="{Binding Timestamp, StringFormat='{0:HH:mm}'}" 
+                                       TextColor="White"
+                                       FontSize="10"
+                                       Opacity="0.7"
+                                       HorizontalOptions="End" />
+                            </StackLayout>
+                        </Border>
+
+                        <!-- AI Message (Left side) -->
+                        <Border Grid.Column="0"
+                                IsVisible="{Binding IsFromUser, Converter={StaticResource InvertedBoolConverter}}"
+                                BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource Gray800}}"
+                                Stroke="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray700}}"
+                                StrokeThickness="1"
+                                HorizontalOptions="Start"
+                                MaximumWidthRequest="300"
+                                Margin="0,0,50,0">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="15,15,15,5" />
+                            </Border.StrokeShape>
+                            
+                            <StackLayout Padding="15,10">
+                                <Label Text="{Binding Message}" 
+                                       TextColor="{AppThemeBinding Light=Black, Dark=White}"
+                                       FontSize="14" />
+                                
+                                <!-- Typing indicator -->
+                                <StackLayout Orientation="Horizontal" 
+                                             IsVisible="{Binding IsTyping}">
+                                    <Label Text="●" 
+                                           TextColor="{AppThemeBinding Light={StaticResource Gray400}, Dark={StaticResource Gray600}}"
+                                           FontSize="12" />
+                                    <Label Text="●" 
+                                           TextColor="{AppThemeBinding Light={StaticResource Gray400}, Dark={StaticResource Gray600}}"
+                                           FontSize="12" />
+                                    <Label Text="●" 
+                                           TextColor="{AppThemeBinding Light={StaticResource Gray400}, Dark={StaticResource Gray600}}"
+                                           FontSize="12" />
+                                </StackLayout>
+                                
+                                <Label Text="{Binding Timestamp, StringFormat='{0:HH:mm}'}" 
+                                       TextColor="{AppThemeBinding Light={StaticResource Gray400}, Dark={StaticResource Gray600}}"
+                                       FontSize="10"
+                                       HorizontalOptions="Start"
+                                       IsVisible="{Binding IsTyping, Converter={StaticResource InvertedBoolConverter}}" />
+                            </StackLayout>
+                        </Border>
+                        
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <!-- Input Area -->
+        <Border Grid.Row="1"
+                BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource Gray800}}"
+                Stroke="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray700}}"
+                StrokeThickness="1"
+                Padding="10">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="0" />
+            </Border.StrokeShape>
+            
+            <Grid ColumnDefinitions="*,Auto,Auto">
+                
+                <!-- Message Entry -->
+                <Entry Grid.Column="0"
+                       Text="{Binding MessageText}"
+                       Placeholder="Type your message..."
+                       IsEnabled="{Binding IsSending, Converter={StaticResource InvertedBoolConverter}}"
+                       ReturnType="Send"
+                       ReturnCommand="{Binding SendMessageCommand}"
+                       MaxLength="1000"
+                       VerticalOptions="Center" />
+
+                <!-- Send Button -->
+                <Button Grid.Column="1"
+                        Text="Send"
+                        Command="{Binding SendMessageCommand}"
+                        IsEnabled="{Binding IsSending, Converter={StaticResource InvertedBoolConverter}}"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
+                        TextColor="White"
+                        CornerRadius="20"
+                        Padding="20,8"
+                        Margin="5,0" />
+
+                <!-- Clear Button -->
+                <Button Grid.Column="2"
+                        Text="Clear"
+                        Command="{Binding ClearChatCommand}"
+                        IsEnabled="{Binding IsSending, Converter={StaticResource InvertedBoolConverter}}"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}"
+                        TextColor="{AppThemeBinding Light=Black, Dark=White}"
+                        CornerRadius="20"
+                        Padding="15,8" />
+                
+            </Grid>
+        </Border>
+        
+    </Grid>
+
+</ContentPage>

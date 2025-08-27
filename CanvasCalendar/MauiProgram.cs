@@ -43,14 +43,17 @@ public static class MauiProgram
         builder.Services.AddSingleton<IDialogService, DialogService>();
         builder.Services.AddSingleton<INavigationService, NavigationService>();
         builder.Services.AddSingleton<ISettingsService, SettingsService>();
+        builder.Services.AddSingleton<IChatService, ChatService>();
 
         // Page Models
         builder.Services.AddSingleton<AssignmentListPageModel>();
         builder.Services.AddSingleton<SettingsPageModel>();
+        builder.Services.AddSingleton<ChatPageModel>();
 
         // Pages
         builder.Services.AddSingleton<AssignmentListPage>();
         builder.Services.AddSingleton<SettingsPage>();
+        builder.Services.AddSingleton<ChatPage>();
 
         return builder.Build();
     }

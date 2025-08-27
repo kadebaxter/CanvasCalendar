@@ -25,7 +25,7 @@
     
     <!-- Testing helpers -->
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.8" />
     
     <!-- For testing HTTP calls -->
     <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.0" />

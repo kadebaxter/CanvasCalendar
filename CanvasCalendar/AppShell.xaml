@@ -14,6 +14,12 @@
         Route="assignments" />
 
     <ShellContent
+        Title="AI Assistant"
+        Icon="chat"
+        ContentTemplate="{DataTemplate pages:ChatPage}"
+        Route="chat" />
+
+    <ShellContent
         Title="Settings"
         Icon="settings"
         ContentTemplate="{DataTemplate pages:SettingsPage}"
