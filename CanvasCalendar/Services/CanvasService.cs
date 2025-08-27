@@ -110,7 +110,7 @@ public class CanvasService : ICanvasService
         }
     }
 
-    private async Task<List<Course>> GetCoursesAsync(string canvasUrl, string apiToken)
+    public async Task<List<Course>> GetCoursesAsync(string canvasUrl, string apiToken)
     {
         try
         {
@@ -137,6 +137,11 @@ public class CanvasService : ICanvasService
             Console.WriteLine($"Error fetching courses from Canvas: {ex.Message}");
             return [];
         }
+    }
+
+    public async Task<List<Assignment>> GetAssignmentsByCourseAsync(string courseId, string canvasUrl, string apiToken)
+    {
+        return await GetAssignmentsByCourseAsync(courseId, canvasUrl, apiToken, null, null);
     }
 
     private async Task<List<Assignment>> GetAssignmentsByCourseAsync(string courseId, string canvasUrl, string apiToken, DateTime? startDate = null, DateTime? endDate = null)
